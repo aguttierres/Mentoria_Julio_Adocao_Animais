@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar · Adote um Amigo</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1><a href="/index.html">🐾 Adote um Amigo</a></h1>
+    <nav id="nav"></nav>
+  </header>
+  <main>
+    <section class="cartao estreito">
+      <img class="boas-vindas" src="/img/cachorro.svg" alt="" />
+      <h2>Entrar</h2>
+      <form id="form-login">
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" required autocomplete="email" />
+        <label for="senha">Senha</label>
+        <input id="senha" name="senha" type="password" required autocomplete="current-password" />
+        <button type="submit">Entrar</button>
+      </form>
+      <div id="msg" class="mensagem" hidden></div>
+      <p>Ainda não tem cadastro? <a href="/cadastro.html">Cadastre-se</a>.</p>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+  <script>
+    const msg = document.getElementById('msg');
+    const params = new URLSearchParams(location.search);
+    if (params.get('msg') === 'login') mostrarMensagem(msg, 'Faça login para ver os animais disponíveis.', 'info');
+    if (params.get('msg') === 'cadastrado') mostrarMensagem(msg, 'Cadastro realizado! Agora é só entrar.', 'sucesso');
+    if (Sessao.token) location.href = '/animais.html';
+
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      try {
+        const { token, usuario } = await api('/auth/login', {
+          method: 'POST',
+          body: { email: form.email.value, senha: form.senha.value }
+        });
+        Sessao.salvar(token, usuario);
+        location.href = '/animais.html';
+      } catch (err) {
+        mostrarMensagem(msg, err.message);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animais · Adote um Amigo</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1><a href="/index.html">🐾 Adote um Amigo</a></h1>
+    <nav id="nav"></nav>
+  </header>
+  <main>
+    <section class="cartao">
+      <h2>Encontre seu novo amigo</h2>
+      <form id="form-filtros" class="filtros">
+        <div>
+          <label for="porte">Porte</label>
+          <select id="porte" name="porte">
+            <option value="">Todos</option>
+            <option value="pequeno">Pequeno</option>
+            <option value="medio">Médio</option>
+            <option value="grande">Grande</option>
+          </select>
+        </div>
+        <div>
+          <label for="idadeMin">Idade mínima (anos)</label>
+          <input id="idadeMin" name="idadeMin" type="number" min="0" step="1" />
+        </div>
+        <div>
+          <label for="idadeMax">Idade máxima (anos)</label>
+          <input id="idadeMax" name="idadeMax" type="number" min="0" step="1" />
+        </div>
+        <div>
+          <label for="cidade">Cidade</label>
+          <input id="cidade" name="cidade" placeholder="Ex.: São Paulo" />
+        </div>
+        <div>
+          <button type="submit">Filtrar</button>
+          <button type="reset" class="secundario">Limpar</button>
+        </div>
+      </form>
+      <div id="msg" class="mensagem" hidden></div>
+    </section>
+
+    <section id="lista" class="grade"></section>
+
+    <section id="cadastro-animal" class="cartao" hidden>
+      <h2>Cadastrar animal (ONG)</h2>
+      <form id="form-animal" class="filtros">
+        <div><label for="a-nome">Nome</label><input id="a-nome" name="nome" required /></div>
+        <div>
+          <label for="a-especie">Espécie</label>
+          <select id="a-especie" name="especie">
+            <option value="cachorro">Cachorro</option>
+            <option value="gato">Gato</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div>
+          <label for="a-porte">Porte</label>
+          <select id="a-porte" name="porte">
+            <option value="pequeno">Pequeno</option>
+            <option value="medio">Médio</option>
+            <option value="grande">Grande</option>
+          </select>
+        </div>
+        <div><label for="a-idade">Idade (anos)</label><input id="a-idade" name="idade" type="number" min="0" required /></div>
+        <div><label for="a-cidade">Cidade</label><input id="a-cidade" name="cidade" required /></div>
+        <div><label for="a-foto">URL da foto (opcional)</label><input id="a-foto" name="fotoUrl" type="url" placeholder="https://..." /></div>
+        <div style="grid-column: 1 / -1"><label for="a-descricao">Descrição</label><textarea id="a-descricao" name="descricao"></textarea></div>
+        <div><button type="submit">Cadastrar animal</button></div>
+      </form>
+      <div id="msg-animal" class="mensagem" hidden></div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+  <script>
+    if (exigirLogin()) {
+      const usuario = Sessao.usuario;
+      const msg = document.getElementById('msg');
+      const lista = document.getElementById('lista');
+      const formFiltros = document.getElementById('form-filtros');
+
+      async function carregar() {
+        const params = new URLSearchParams();
+        for (const [k, v] of new FormData(formFiltros)) if (v !== '') params.append(k, v);
+        mostrarMensagem(msg, '');
+        try {
+          const animais = await api(`/animais?${params}`);
+          if (!animais.length) {
+            lista.innerHTML = '<p class="vazio">Nenhum animal encontrado com esses filtros.</p>';
+            return;
+          }
+          lista.innerHTML = animais.map((a) => `
+            <article class="cartao animal">
+              <img class="foto" src="${escapar(fotoAnimal(a))}" alt="Foto de ${escapar(a.nome)}" loading="lazy"
+                   onerror="imagemPadrao(this, '${escapar(a.especie)}')" />
+              <div class="conteudo">
+              <h3>${escapar(a.nome)}</h3>
+              <div class="tags">
+                <span class="tag">${escapar(a.especie)}</span>
+                <span class="tag">${rotuloPorte[a.porte] || escapar(a.porte)}</span>
+                <span class="tag">${anos(a.idade)}</span>
+                <span class="tag">${escapar(a.cidade)}</span>
+              </div>
+              <p>${escapar(a.descricao || '')}</p>
+              <small>ONG: ${escapar(a.ong ? a.ong.nome : '')}</small>
+              ${usuario.tipo === 'adotante'
+                ? `<button type="button" data-id="${a._id}">Quero adotar</button>`
+                : ''}
+              </div>
+            </article>`).join('');
+        } catch (err) {
+          mostrarMensagem(msg, err.message);
+        }
+      }
+
+      // Seleção do animal → página de finalização do pedido
+      lista.addEventListener('click', (e) => {
+        const id = e.target.dataset && e.target.dataset.id;
+        if (id) location.href = `/pedido.html?animal=${encodeURIComponent(id)}`;
+      });
+
+      formFiltros.addEventListener('submit', (e) => { e.preventDefault(); carregar(); });
+      formFiltros.addEventListener('reset', () => setTimeout(carregar, 0));
+
+      if (usuario.tipo === 'ong') {
+        document.getElementById('cadastro-animal').hidden = false;
+        const msgAnimal = document.getElementById('msg-animal');
+        document.getElementById('form-animal').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const f = e.target;
+          try {
+            const a = await api('/animais', {
+              method: 'POST',
+              body: {
+                nome: f.nome.value,
+                especie: f.especie.value,
+                porte: f.porte.value,
+                idade: Number(f.idade.value),
+                cidade: f.cidade.value,
+                descricao: f.descricao.value,
+                fotoUrl: f.fotoUrl.value || undefined
+              }
+            });
+            mostrarMensagem(msgAnimal, `${a.nome} foi cadastrado com sucesso!`, 'sucesso');
+            f.reset();
+            carregar();
+          } catch (err) {
+            mostrarMensagem(msgAnimal, err.message);
+          }
+        });
+      }
+
+      carregar();
+    }
+  </script>
+</body>
+</html>

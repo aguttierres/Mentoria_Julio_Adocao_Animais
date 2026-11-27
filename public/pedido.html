@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pedido de adoção · Adote um Amigo</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1><a href="/index.html">🐾 Adote um Amigo</a></h1>
+    <nav id="nav"></nav>
+  </header>
+  <main>
+    <section id="finalizar" class="cartao" hidden>
+      <h2>Finalizar pedido de adoção</h2>
+      <div id="resumo"></div>
+      <form id="form-pedido">
+        <label for="mensagem">Conte um pouco sobre você e sua casa (opcional)</label>
+        <textarea id="mensagem" name="mensagem"></textarea>
+        <button type="submit">Enviar pedido de adoção</button>
+        <a href="/animais.html">Voltar para a lista</a>
+      </form>
+      <div id="msg" class="mensagem" hidden></div>
+    </section>
+
+    <section class="cartao">
+      <h2 id="titulo-pedidos">Meus pedidos</h2>
+      <div id="pedidos"></div>
+      <div id="msg-pedidos" class="mensagem" hidden></div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+  <script>
+    if (exigirLogin()) {
+      const usuario = Sessao.usuario;
+      const ehOng = usuario.tipo === 'ong';
+      const animalId = new URLSearchParams(location.search).get('animal');
+      const msg = document.getElementById('msg');
+      const msgPedidos = document.getElementById('msg-pedidos');
+      const pedidosEl = document.getElementById('pedidos');
+      if (ehOng) document.getElementById('titulo-pedidos').textContent = 'Pedidos recebidos';
+
+      async function carregarAnimal() {
+        if (!animalId || ehOng) return;
+        document.getElementById('finalizar').hidden = false;
+        try {
+          const a = await api(`/animais/${encodeURIComponent(animalId)}`);
+          document.getElementById('resumo').innerHTML = `
+            <div class="resumo-animal">
+            <img src="${escapar(fotoAnimal(a))}" alt="Foto de ${escapar(a.nome)}" onerror="imagemPadrao(this, '${escapar(a.especie)}')" />
+            <p><strong>${escapar(a.nome)}</strong> — ${escapar(a.especie)}, porte ${rotuloPorte[a.porte] || ''},
+            ${anos(a.idade)}, ${escapar(a.cidade)}<br><small>ONG: ${escapar(a.ong ? a.ong.nome : '')}</small></p>
+            </div>`;
+        } catch (err) {
+          mostrarMensagem(msg, err.message);
+          document.querySelector('#form-pedido button').disabled = true;
+        }
+      }
+
+      async function carregarPedidos() {
+        try {
+          const pedidos = await api('/pedidos');
+          if (!pedidos.length) {
+            pedidosEl.innerHTML = '<p class="vazio">Nenhum pedido ainda.</p>';
+            return;
+          }
+          pedidosEl.innerHTML = `<table>
+            <thead><tr><th>Animal</th>${ehOng ? '<th>Interessado</th>' : ''}<th>Data</th><th>Status</th>${ehOng ? '<th></th>' : ''}</tr></thead>
+            <tbody>${pedidos.map((p) => `
+              <tr>
+                <td>${escapar(p.animal ? p.animal.nome : '—')}</td>
+                ${ehOng ? `<td>${escapar(p.usuario ? `${p.usuario.nome} (${p.usuario.email})` : '')}</td>` : ''}
+                <td>${new Date(p.createdAt).toLocaleDateString('pt-BR')}</td>
+                <td class="status-${p.status}">${rotuloStatus[p.status]}</td>
+                ${ehOng ? `<td>${p.status === 'pendente'
+                  ? `<button type="button" data-id="${p._id}" data-status="aprovado">Aprovar</button>
+                     <button type="button" class="secundario" data-id="${p._id}" data-status="recusado">Recusar</button>`
+                  : ''}</td>` : ''}
+              </tr>`).join('')}
+            </tbody></table>`;
+        } catch (err) {
+          mostrarMensagem(msgPedidos, err.message);
+        }
+      }
+
+      document.getElementById('form-pedido').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          await api('/pedidos', { method: 'POST', body: { animalId, mensagem: e.target.mensagem.value } });
+          mostrarMensagem(msg, 'Pedido enviado! A ONG vai analisar e responder em breve.', 'sucesso');
+          e.target.querySelector('button').disabled = true;
+          carregarPedidos();
+        } catch (err) {
+          mostrarMensagem(msg, err.message);
+        }
+      });
+
+      pedidosEl.addEventListener('click', async (e) => {
+        const { id, status } = e.target.dataset || {};
+        if (!id) return;
+        try {
+          await api(`/pedidos/${id}`, { method: 'PATCH', body: { status } });
+          mostrarMensagem(msgPedidos, `Pedido ${status}.`, 'sucesso');
+          carregarPedidos();
+        } catch (err) {
+          mostrarMensagem(msgPedidos, err.message);
+        }
+      });
+
+      carregarAnimal();
+      carregarPedidos();
+    }
+  </script>
+</body>
+</html>
