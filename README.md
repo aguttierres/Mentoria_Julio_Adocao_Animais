@@ -129,6 +129,31 @@ Para usar fotos reais, faça uma destas duas coisas:
 - Coloque as fotos em `public/img/` e ajuste o campo `fotoUrl` em `src/seed.js` (por exemplo, `/img/rex.jpg`).
 - Ao cadastrar um animal como ONG, informe a URL de uma foto no campo **URL da foto**.
 
+## Testes automatizados
+
+Os testes cobrem as condições de teste da US01 (documento na Wiki), uma por regra de negócio:
+
+| ID | Condição de teste | API (Mocha + Chai + Supertest) | Web (Cypress) |
+| --- | --- | --- | --- |
+| CT-01 | Listar animais sem estar autenticado | `test/api/condicoes-us01.test.js` | `cypress/e2e/condicoes-us01.cy.js` |
+| CT-02 | Tentar fazer login sem o e-mail estar cadastrado | `test/api/condicoes-us01.test.js` | `cypress/e2e/condicoes-us01.cy.js` |
+| CT-03 | Fazer um segundo pedido de adoção tendo um outro pendente | `test/api/condicoes-us01.test.js` | `cypress/e2e/condicoes-us01.cy.js` |
+
+O CT-03 cadastra um adotante novo a cada execução, então os testes podem rodar várias vezes sem reiniciar o servidor.
+
+```bash
+npm install          # instala também Mocha, Chai, Supertest e Cypress
+npm test             # sobe a aplicação, roda os testes de API e os do Cypress e encerra
+```
+
+Para rodar separadamente, deixe a aplicação no ar com `npm start` e, em outro terminal:
+
+```bash
+npm run test:api     # testes de API
+npm run cy:open      # abre a interface do Cypress
+npm run cy:run       # roda o Cypress sem interface
+```
+
 ## Estrutura do projeto
 
 ```
@@ -141,6 +166,9 @@ Para usar fotos reais, faça uma destas duas coisas:
 │   ├── img/                 # Ilustrações (fundo e animais)
 │   ├── app.js
 │   └── style.css
+├── test/api/                # Testes de API (Mocha + Chai + Supertest)
+├── cypress/                 # Testes web (Cypress)
+├── cypress.config.js
 └── src/
     ├── server.js            # Inicia banco em memória, seed e servidor HTTP
     ├── app.js               # Configuração do Express e rotas
