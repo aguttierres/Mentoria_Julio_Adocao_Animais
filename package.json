@@ -5,7 +5,11 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "test:api": "mocha test/api --timeout 15000",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "test": "start-server-and-test start http://localhost:3000/api/health \"npm run test:api && npm run cy:run\""
   },
   "engines": {
     "node": ">=18"
@@ -19,5 +23,12 @@
     "mongoose": "^8.9.0",
     "swagger-ui-express": "^5.0.1",
     "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "chai": "^4.5.0",
+    "cypress": "^14.0.0",
+    "mocha": "^10.8.2",
+    "start-server-and-test": "^2.0.9",
+    "supertest": "^7.0.0"
   }
 }
