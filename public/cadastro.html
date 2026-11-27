@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro · Adote um Amigo</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1><a href="/index.html">🐾 Adote um Amigo</a></h1>
+    <nav id="nav"></nav>
+  </header>
+  <main>
+    <section class="cartao estreito">
+      <img class="boas-vindas" src="/img/gato.svg" alt="" />
+      <h2>Criar cadastro</h2>
+      <form id="form-cadastro">
+        <label for="nome">Nome</label>
+        <input id="nome" name="nome" required />
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" required autocomplete="email" />
+        <label for="senha">Senha (mín. 6 caracteres)</label>
+        <input id="senha" name="senha" type="password" minlength="6" required autocomplete="new-password" />
+        <label for="cidade">Cidade</label>
+        <input id="cidade" name="cidade" required />
+        <label for="telefone">Telefone</label>
+        <input id="telefone" name="telefone" />
+        <label for="tipo">Eu sou</label>
+        <select id="tipo" name="tipo">
+          <option value="adotante">Interessado em adotar</option>
+          <option value="ong">ONG</option>
+        </select>
+        <button type="submit">Cadastrar</button>
+      </form>
+      <div id="msg" class="mensagem" hidden></div>
+      <p>Já tem cadastro? <a href="/index.html">Entrar</a>.</p>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+  <script>
+    const msg = document.getElementById('msg');
+    document.getElementById('form-cadastro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      try {
+        await api('/auth/cadastro', {
+          method: 'POST',
+          body: {
+            nome: f.nome.value,
+            email: f.email.value,
+            senha: f.senha.value,
+            cidade: f.cidade.value,
+            telefone: f.telefone.value,
+            tipo: f.tipo.value
+          }
+        });
+        location.href = '/index.html?msg=cadastrado';
+      } catch (err) {
+        mostrarMensagem(msg, err.message);
+      }
+    });
+  </script>
+</body>
+</html>
